@@ -1,13 +1,14 @@
 "use client"
 
 import { Moon, Sun } from "lucide-react"
-import { useTheme } from "next-themes"
 
+import { useTheme } from "@/components/theme-provider"
 import { Button } from "@/components/ui/button"
 
 export function ThemeToggle() {
-  const { resolvedTheme, setTheme } = useTheme()
-  const dark = resolvedTheme !== "light"
+  const { mounted, resolvedTheme, setTheme } = useTheme()
+  const dark = mounted ? resolvedTheme === "dark" : true
+
   return (
     <Button
       aria-label={dark ? "切换到浅色模式" : "切换到深色模式"}

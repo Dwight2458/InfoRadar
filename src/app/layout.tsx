@@ -18,11 +18,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html
       lang="zh-CN"
-      className={`${GeistSans.variable} ${GeistMono.variable} h-full antialiased`}
+      className={`${GeistSans.variable} ${GeistMono.variable} dark h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="min-h-full">
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+        <ThemeProvider defaultTheme="dark">
           <TooltipProvider>
             <AppShell>{children}</AppShell>
             <Toaster richColors position="top-right" />
