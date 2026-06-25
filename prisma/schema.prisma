@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum SourceType {
+  FACT
+  NEWS
+  OPINION
+}
+
+enum Category {
+  AI
+  TECH
+  CRYPTO
+  FINANCE
+  STOCK
+  MACRO
+  DEVTOOLS
+}
+
+enum ItemStatus {
+  PUBLISHED
+  ARCHIVED
+}
+
+enum FetchJobStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  SKIPPED
+}
+
+enum FetchTrigger {
+  SCHEDULED
+  MANUAL
+  CLI
+}
+
+model Source {
+  id                   String     @id @default(cuid())
+  name                 String
+  slug                 String     @unique
+  url                  String     @db.Text
+  type                 SourceType
+  category             Category
+  provider             String
+  enabled              Boolean    @default(true)
+  fetchIntervalMinutes Int        @default(60) @map("fetch_interval_minutes")
+  reliabilityScore     Float      @default(50) @map("reliability_score")
+  notes                String?    @db.Text
+  config               Json       @default("{}")
+  lastAttemptAt        DateTime?  @map("last_attempt_at")
+  lastFetchedAt        DateTime?  @map("last_fetched_at")
+  lastError             String?    @db.Text @map("last_error")
+  createdAt             DateTime   @default(now()) @map("created_at")
+  updatedAt             DateTime   @updatedAt @map("updated_at")
+  items                 Item[]
+  fetchJobs             FetchJob[]
+
+  @@index([enabled, lastAttemptAt])
+  @@map("sources")
+}
+
+model Item {
+  id               String      @id @default(cuid())
+  sourceId         String      @map("source_id")
+  sourceType       SourceType  @map("source_type")
+  title            String      @db.Text
+  url              String      @db.Text
+  canonicalUrl     String      @db.Text @map("canonical_url")
+  urlHash          String      @unique @db.Char(64) @map("url_hash")
+  normalizedTitle  String      @db.Text @map("normalized_title")
+  titleHash        String      @db.Char(64) @map("title_hash")
+  author           String?
+  summary          String?     @db.Text
+  content          String?     @db.Text
+  rawContent       String?     @db.Text @map("raw_content")
+  publishedAt      DateTime?   @map("published_at")
+  fetchedAt        DateTime    @default(now()) @map("fetched_at")
+  language         String?     @db.VarChar(16)
+  categories       Category[]  @default([])
+  tags             String[]    @default([])
+  entities         String[]    @default([])
+  tickers          String[]    @default([])
+  cryptoSymbols    String[]    @default([]) @map("crypto_symbols")
+  importanceScore  Float       @default(0) @map("importance_score")
+  reliabilityScore Float       @default(0) @map("reliability_score")
+  sentimentScore   Float?      @map("sentiment_score")
+  noveltyScore     Float       @default(0) @map("novelty_score")
+  heatScore        Float       @default(0) @map("heat_score")
+  status           ItemStatus  @default(PUBLISHED)
+  metrics          Json?
+  rawJson          Json?       @map("raw_json")
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @updatedAt @map("updated_at")
+  source           Source      @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceId, titleHash])
+  @@index([sourceId, publishedAt(sort: Desc)])
+  @@index([sourceType, publishedAt(sort: Desc)])
+  @@index([importanceScore(sort: Desc)])
+  @@index([heatScore(sort: Desc)])
+  @@index([fetchedAt(sort: Desc)])
+  @@map("items")
+}
+
+model FetchJob {
+  id             String         @id @default(cuid())
+  sourceId       String         @map("source_id")
+  queueJobId     String?        @unique @map("queue_job_id")
+  trigger        FetchTrigger
+  status         FetchJobStatus @default(QUEUED)
+  startedAt      DateTime?      @map("started_at")
+  finishedAt     DateTime?      @map("finished_at")
+  durationMs     Int?           @map("duration_ms")
+  fetchedCount   Int            @default(0) @map("fetched_count")
+  insertedCount  Int            @default(0) @map("inserted_count")
+  updatedCount   Int            @default(0) @map("updated_count")
+  duplicateCount Int            @default(0) @map("duplicate_count")
+  error          String?        @db.Text
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+  source         Source         @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([sourceId, createdAt(sort: Desc)])
+  @@map("fetch_jobs")
+}
